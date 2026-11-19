@@ -74,6 +74,14 @@ Functions shared across modules:
 - `render_text(report: AnalysisReport) -> str`
 - `render_json(report: AnalysisReport) -> str`
 
+Decisions agreed at kickoff:
+
+- Person A writes `models.py`; Person B reviews it.
+- Stdin is out of scope for the MVP; the CLI accepts one file path.
+- `ParsedEmail.headers` keys are lowercase (for example `headers["reply-to"]`); values are decoded and kept in file order.
+- Rules derive From/Reply-To domains in `rules.py` with `email.utils.getaddresses`; the parser supplies the header values only.
+- `parse_email` raises only `InputTooLargeError` (in `models.py`) for oversized input; malformed content is reported through `parse_warnings`.
+
 Agree on names and fields in a short kickoff before implementation. If a field must change, update this contract and both owners' tests in the same change.
 
 ## Partner Work Plan
