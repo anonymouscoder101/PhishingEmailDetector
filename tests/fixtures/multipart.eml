@@ -1,0 +1,40 @@
+From: Billing <billing@example.com>
+To: Bob Example <bob@example.com>
+Subject: Your invoice
+Date: Mon, 16 Nov 2026 10:00:00 +0000
+Message-ID: <multipart-1@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer-boundary"
+
+--outer-boundary
+Content-Type: multipart/alternative; boundary="inner-boundary"
+
+--inner-boundary
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Your invoice is ready: https://billing.example.com/invoice/42
+
+--inner-boundary
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+<p>Your invoice is <a href=3D"https://billing.example.com/invoice/42">ready</a>=
+.</p>
+
+--inner-boundary--
+
+--outer-boundary
+Content-Type: text/plain; charset="utf-8"
+Content-Disposition: attachment; filename="notes.txt"
+
+ATTACHMENT-CONTENT-MARKER https://attachment.example.com/hidden
+
+--outer-boundary
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="invoice.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJSBzeW50aGV0aWMgdGVzdCBmaWxlCg==
+
+--outer-boundary--

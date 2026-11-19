@@ -1,0 +1,6 @@
+From: Broken <broken@example.test>
+Subject: Malformed MIME
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="declared-but-never-used"
+
+SECRET-BODY-TOKEN This body never contains the declared boundary.

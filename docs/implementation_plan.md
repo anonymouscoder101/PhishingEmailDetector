@@ -107,13 +107,13 @@ Agree on names and fields in a short kickoff before implementation. If a field m
 
 **Files:** `parser.py`, `extractors.py`, `tests/fixtures/`, `tests/test_parser.py`, `tests/test_extractors.py`.
 
-- [ ] Add parser tests for a simple message, multipart text/HTML, repeated headers, missing headers, malformed MIME, charset decoding fallback, and an input larger than 10 MiB.
-- [ ] Implement `parse_email(data, max_bytes=...)` using `email.parser.BytesParser` with a modern email policy; preserve repeated header values and capture parser defects as warnings.
-- [ ] Decode only `text/plain` and `text/html` bodies; skip attachments and non-text parts. Handle decode failures without raising.
-- [ ] Add URL extraction tests for plain text, HTML `href` values, visible link text, duplicate links, malformed URLs, and strings containing terminal control characters.
-- [ ] Implement `extract_urls(email)` without DNS or HTTP access. Retain the original value for evidence; use safe parsing to derive normalized URL and hostname.
-- [ ] Run `uv run pytest tests/test_parser.py tests/test_extractors.py -q` and resolve failures.
-- [ ] Commit with a focused message such as `feat: parse email and extract urls`.
+- [x] Add parser tests for a simple message, multipart text/HTML, repeated headers, missing headers, malformed MIME, charset decoding fallback, and an input larger than 10 MiB.
+- [x] Implement `parse_email(data, max_bytes=...)` using `email.parser.BytesParser` with a modern email policy; preserve repeated header values and capture parser defects as warnings.
+- [x] Decode only `text/plain` and `text/html` bodies; skip attachments and non-text parts. Handle decode failures without raising.
+- [x] Add URL extraction tests for plain text, HTML `href` values, visible link text, duplicate links, malformed URLs, and strings containing terminal control characters.
+- [x] Implement `extract_urls(email)` without DNS or HTTP access. Retain the original value for evidence; use safe parsing to derive normalized URL and hostname.
+- [x] Run `uv run pytest tests/test_parser.py tests/test_extractors.py -q` and resolve failures.
+- [x] Commit with a focused message such as `feat: parse email and extract urls`.
 
 **Produces:** `ParsedEmail`, `ExtractedUrl`, `parse_email`, and `extract_urls` as defined in the shared contract.
 

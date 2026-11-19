@@ -1,0 +1,2 @@
+# Keep .eml fixtures byte-for-byte identical on every machine.
+tests/fixtures/*.eml -text

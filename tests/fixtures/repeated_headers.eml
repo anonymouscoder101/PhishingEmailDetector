@@ -1,0 +1,11 @@
+Received: from relay2.example.com by mx.example.com; Mon, 16 Nov 2026 11:00:03 +0000
+Received: from relay1.example.com by relay2.example.com; Mon, 16 Nov 2026 11:00:02 +0000
+Received: from sender.example.net by relay1.example.com; Mon, 16 Nov 2026 11:00:01 +0000
+Authentication-Results: mx.example.com; spf=pass smtp.mailfrom=example.net
+Authentication-Results: mx.example.com; dkim=fail header.d=example.net
+From: Sender <sender@example.net>
+Subject: Repeated headers
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Body text.
