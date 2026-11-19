@@ -1,12 +1,13 @@
 """Tests for extract_urls: text and HTML links, normalization, and hostile input."""
 
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 
-from phishdetector.extractors import MAX_URLS, extract_urls
+from phishdetector.extractors import HTML_PARSE_WARNING, MAX_URLS, URL_LIMIT_WARNING, extract_urls
 from phishdetector.models import ExtractedUrl, ParsedEmail
-from phishdetector.parser import parse_email
+from phishdetector.parser import MAX_WARNINGS, parse_email
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -189,10 +190,39 @@ def test_same_url_in_text_and_html_is_kept_per_source() -> None:
     assert [url.source for url in urls] == ["text", "html_href"]
 
 
-def test_url_count_is_capped() -> None:
+def test_url_count_is_capped_with_one_warning() -> None:
     text = " ".join(f"https://example.com/{number}" for number in range(MAX_URLS + 100))
+    email = ParsedEmail(text_parts=[text])
 
-    assert len(from_text(text)) == MAX_URLS
+    assert len(extract_urls(email)) == MAX_URLS
+    assert email.parse_warnings == [URL_LIMIT_WARNING]
+
+
+def test_no_warning_below_url_cap() -> None:
+    email = ParsedEmail(text_parts=["https://example.com/"])
+    extract_urls(email)
+
+    assert email.parse_warnings == []
+
+
+def test_html_parse_failure_adds_warning(monkeypatch: pytest.MonkeyPatch) -> None:
+    def broken_feed(self: HTMLParser, data: str) -> None:
+        raise AssertionError("simulated parser failure")
+
+    monkeypatch.setattr(HTMLParser, "feed", broken_feed)
+    email = ParsedEmail(html_parts=["<p>one</p>", "<p>two</p>"])
+
+    assert extract_urls(email) == []
+    assert email.parse_warnings == [HTML_PARSE_WARNING]  # added once, not per part
+
+
+def test_extraction_warnings_respect_the_cap() -> None:
+    full = [f"warning {number}" for number in range(MAX_WARNINGS)]
+    text = " ".join(f"https://example.com/{number}" for number in range(MAX_URLS + 1))
+    email = ParsedEmail(text_parts=[text], parse_warnings=list(full))
+    extract_urls(email)
+
+    assert email.parse_warnings == full
 
 
 # --- malformed and hostile URLs ----------------------------------------------

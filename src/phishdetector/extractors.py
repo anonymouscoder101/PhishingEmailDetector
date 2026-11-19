@@ -10,8 +10,11 @@ from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
 from phishdetector.models import ExtractedUrl, ParsedEmail
+from phishdetector.parser import MAX_WARNINGS
 
 MAX_URLS = 500
+URL_LIMIT_WARNING = f"URL limit of {MAX_URLS} reached; further URLs skipped"
+HTML_PARSE_WARNING = "an HTML part could not be fully parsed; some links may be missing"
 MAX_VISIBLE_TEXT = 1000
 
 # Stop at whitespace, quotes, angle brackets, and control characters so a URL
@@ -28,12 +31,17 @@ def extract_urls(email: ParsedEmail) -> list[ExtractedUrl]:
 
     Duplicates are removed on (normalized, source, visible_text), keeping the
     first occurrence. At most MAX_URLS URLs are returned.
+
+    If the URL limit is reached or HTML cannot be fully parsed, a short
+    warning is appended to ``email.parse_warnings`` (still capped at
+    MAX_WARNINGS) so the report shows that extraction was incomplete.
     """
     results: list[ExtractedUrl] = []
     seen: set[tuple[str, str, str | None]] = set()
 
     def add(original: str, source: str, visible_text: str | None = None) -> None:
         if len(results) >= MAX_URLS:
+            _add_warning(email, URL_LIMIT_WARNING)
             return
         url = _build_url(original, source, visible_text)
         key = (url.normalized, url.source, url.visible_text)
@@ -46,7 +54,9 @@ def extract_urls(email: ParsedEmail) -> list[ExtractedUrl]:
             add(original, "text")
 
     for html in email.html_parts:
-        links, visible_text = _parse_html(html)
+        links, visible_text, complete = _parse_html(html)
+        if not complete:
+            _add_warning(email, HTML_PARSE_WARNING)
         for href, label in links:
             if _HTTP_SCHEME_RE.match(_clean_href(href)):
                 add(href, "html_href", label)
@@ -54,6 +64,12 @@ def extract_urls(email: ParsedEmail) -> list[ExtractedUrl]:
             add(original, "html_text")
 
     return results
+
+
+def _add_warning(email: ParsedEmail, warning: str) -> None:
+    """Append a warning once, without exceeding the parser's warning cap."""
+    if warning not in email.parse_warnings and len(email.parse_warnings) < MAX_WARNINGS:
+        email.parse_warnings.append(warning)
 
 
 def _find_text_urls(text: str) -> list[str]:
@@ -171,12 +187,14 @@ class _LinkParser(HTMLParser):
         self._label = []
 
 
-def _parse_html(html: str) -> tuple[list[tuple[str, str | None]], str]:
+def _parse_html(html: str) -> tuple[list[tuple[str, str | None]], str, bool]:
+    """Return (links, text outside links, whether parsing completed)."""
     parser = _LinkParser()
+    complete = True
     try:
         parser.feed(html)
         parser.close()
     except Exception:
-        pass  # keep whatever was collected before the markup broke the parser
+        complete = False  # keep whatever was collected before the markup broke the parser
     parser.finish()
-    return parser.links, "\n".join(parser.text_chunks)
+    return parser.links, "\n".join(parser.text_chunks), complete
