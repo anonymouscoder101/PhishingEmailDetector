@@ -82,6 +82,15 @@ Decisions agreed at kickoff:
 - Rules derive From/Reply-To domains in `rules.py` with `email.utils.getaddresses`; the parser supplies the header values only.
 - `parse_email` raises only `InputTooLargeError` (in `models.py`) for oversized input; malformed content is reported through `parse_warnings`.
 
+Notes from Person A's implementation (Phase 2A) that affect rules and reporting:
+
+- `ExtractedUrl.source` is one of `"text"` (plain-text body), `"html_href"` (an `<a href>`), or `"html_text"` (a URL written in HTML text outside a link).
+- `ExtractedUrl.original` is kept exactly as found and can contain terminal control characters from an `href`; reporting must escape it.
+- `ExtractedUrl.host` is lowercase, without port or user-info, and never converted to `xn--` form; the punycode rule should check for `xn--` labels and non-ASCII characters. It is `None` when the URL cannot be parsed or the host contains whitespace or control characters.
+- Backslashes are treated as slashes when deriving `host`, as browsers do, so `http://evil.test\@good.example.com` reports `evil.test`.
+- `ExtractedUrl.visible_text` is the whitespace-collapsed link label for `html_href` URLs, or `None` when there is no label (for example, an image-only link).
+- `extract_urls` appends a warning to `email.parse_warnings` when it reaches the 500-URL limit or cannot fully parse an HTML part; call `build_report` after `extract_urls` so these warnings appear.
+
 Agree on names and fields in a short kickoff before implementation. If a field must change, update this contract and both owners' tests in the same change.
 
 ## Partner Work Plan
