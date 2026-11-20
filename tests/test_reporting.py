@@ -19,6 +19,27 @@ def test_build_report_uses_shared_schema_and_preserves_warnings() -> None:
     assert report.parse_warnings == ["limited extraction"]
 
 
+def test_build_report_lists_each_url_once() -> None:
+    url = ExtractedUrl("https://example.test/", "https://example.test/", "example.test", "text")
+    html_url = ExtractedUrl("https://example.test/", "https://example.test/", "example.test", "html_href", "here")
+    other = ExtractedUrl("https://other.test/", "https://other.test/", "other.test", "text")
+
+    report = build_report(ParsedEmail(), [url, html_url, other, url], [])
+
+    assert report.urls == ["https://example.test/", "https://other.test/"]
+
+
+def test_json_escapes_invisible_and_non_ascii_characters() -> None:
+    hostile = "https://example.test/\x9b31m‮аpple"
+    report = AnalysisReport("1", 0, "low", [], [hostile], [])
+
+    rendered = render_json(report)
+
+    assert rendered.isascii()
+    assert "\\u009b" in rendered and "\\u202e" in rendered
+    assert json.loads(rendered)["urls"] == [hostile]  # escaping is lossless
+
+
 def test_json_has_stable_fields_and_is_valid_json() -> None:
     report = AnalysisReport(
         "1", 25, "guarded",

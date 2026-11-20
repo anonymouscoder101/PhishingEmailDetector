@@ -26,7 +26,9 @@ def build_report(
         score=score,
         severity=severity,
         findings=list(findings),
-        urls=[url.original for url in urls],
+        # The extractor keeps repeated links (needed for the visible-text rule);
+        # list each distinct URL once in the report.
+        urls=list(dict.fromkeys(url.original for url in urls)),
         parse_warnings=list(email.parse_warnings),
     )
 
@@ -50,7 +52,10 @@ def render_json(report: AnalysisReport) -> str:
         "urls": report.urls,
         "parse_warnings": report.parse_warnings,
     }
-    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    # ensure_ascii=True escapes every non-ASCII character, including invisible
+    # C1 controls (such as \x9b) and bidi overrides, so printing the JSON to a
+    # terminal cannot be manipulated by message content.
+    return json.dumps(payload, ensure_ascii=True, indent=2) + "\n"
 
 
 def render_text(report: AnalysisReport) -> str:

@@ -75,6 +75,20 @@ Result: score 100 (critical), exit code 0, no parse warnings. Every finding maps
 3. **JSON passes some invisible control characters through.** `render_json` uses `ensure_ascii=False`, so C1 controls such as `\x9b` and bidi overrides such as U+202E from an `href` appear unescaped in `urls`. Suggested fix: `ensure_ascii=True`.
 4. **Minor:** only `fail` is flagged for SPF/DKIM/DMARC; `softfail`, `permerror`, and `temperror` are not. Possibly intentional; worth deciding explicitly.
 
+### Resolution of issues 1–3
+
+With Person B's agreement, Person A fixed issues 1–3 on 2026-11-20. Full suite: 118 passed.
+
+| Issue | Fix | Before → after |
+|---|---|---|
+| 1. Duplicate findings | `evaluate_rules` keeps one finding per (rule ID, evidence). `build_report` lists each distinct URL once. | One IP link in text + HTML: 50 → 25. The same link 4 times: 100 → 25. `suspicious.eml` now shows `url.ip_literal` once and no repeated URLs. |
+| 2. Visible-text false positives | Link labels count as hosts only if they start with `http(s)://` or `www.`, or end in an alphabetic top-level label that is not a common file extension. A `www.` prefix matches the bare domain. | `invoice.pdf`: 20 → 0. `example.com` linking to `www.example.com`: 20 → 0. Real mismatches are still flagged. |
+| 3. JSON control characters | `render_json` uses `ensure_ascii=True`. | `\x9b` and U+202E now appear escaped (`\u009b`, `‮`); the JSON still decodes to the same values. |
+
+Trade-off for issue 2: `.zip` and `.mov` are real top-level domains, but a label like `invoice.zip` is treated as a file name, not a domain. A label that starts with `www.` or `http` is always compared.
+
+Item 4 (`softfail`, `permerror`, `temperror`) is unchanged and still open for a decision.
+
 ## False negatives observed on real spam
 
 Person A ran the tool locally on two real spam messages from a personal junk folder. The messages are not committed, and no personal details or tracking identifiers are recorded here. Both were clearly phishing to a human reader, but both scored **0 (low)** with no findings. Extraction worked as intended in both: every link was found, and nothing crashed.
@@ -100,4 +114,4 @@ Other observations from these runs:
 
 Real messages tested so far are not a representative sample and do not support any accuracy claim. They show that the current rule set detects technical indicators (header and URL structure) and does not detect content-based or brand-impersonation scams sent from well-configured infrastructure.
 
-Person A approves the parse and extraction side of the report behavior. Final approval is pending agreement on items 1–3.
+Person A approves the parse and extraction side of the report behavior. Items 1–3 are fixed (see above); final approval is pending Person B's review of those fixes and the joint review.

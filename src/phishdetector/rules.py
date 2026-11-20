@@ -32,7 +32,17 @@ MAX_EVIDENCE_LENGTH = 180
 SHORTENER_DOMAINS = frozenset(
     {"bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "ow.ly", "buff.ly", "cutt.ly"}
 )
-_AUTH_FAILURE_RE = re.compile(r"(?<![a-z0-9_-])(spf|dkim|dmarc)\s*=\s*(fail)(?![a-z0-9_-])", re.IGNORECASE)
+# Link labels ending in these are treated as file names, not domains. A few
+# (such as .zip and .mov) are also real top-level domains, but in link text
+# they are far more often file names.
+FILE_EXTENSIONS = frozenset(
+    {
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf", "csv",
+        "zip", "rar", "gz", "tar", "jpg", "jpeg", "png", "gif", "bmp", "svg",
+        "htm", "html", "exe", "msi", "mp3", "mp4", "mov", "wav", "eml", "ics", "xml", "json",
+    }
+)
+_AUTH_FAILURE_RE =re.compile(r"(?<![a-z0-9_-])(spf|dkim|dmarc)\s*=\s*(fail)(?![a-z0-9_-])", re.IGNORECASE)
 
 
 def evaluate_rules(email: ParsedEmail, urls: list[ExtractedUrl]) -> list[Finding]:
@@ -53,7 +63,24 @@ def evaluate_rules(email: ParsedEmail, urls: list[ExtractedUrl]) -> list[Finding
     findings.extend(_authentication_findings(email))
     for url in urls:
         findings.extend(_url_findings(url))
-    return findings
+    return _unique_findings(findings)
+
+
+def _unique_findings(findings: list[Finding]) -> list[Finding]:
+    """Keep one finding per (rule ID, evidence), in first-seen order.
+
+    The same link often appears in both the plain-text and HTML versions of an
+    email, or several times with different labels. Without this, one
+    suspicious destination would be scored once per appearance.
+    """
+    seen: set[tuple[str, tuple[tuple[str, str], ...]]] = set()
+    unique: list[Finding] = []
+    for finding in findings:
+        key = (finding.id, tuple(sorted(finding.evidence.items())))
+        if key not in seen:
+            seen.add(key)
+            unique.append(finding)
+    return unique
 
 
 def _from_reply_to_mismatch(email: ParsedEmail) -> tuple[str, str] | None:
@@ -134,7 +161,7 @@ def _url_findings(url: ExtractedUrl) -> list[Finding]:
         findings.append(_finding("url.shortener", "low", "URL uses a known shortening domain", {"host": host}))
 
     visible_host = _visible_host(url.visible_text) if url.source == "html_href" else None
-    if visible_host and visible_host != host:
+    if visible_host and _without_www(visible_host) != _without_www(host):
         findings.append(
             _finding(
                 "url.visible_text_mismatch",
@@ -156,9 +183,16 @@ def _has_userinfo(url: str) -> bool:
 
 
 def _visible_host(text: str | None) -> str | None:
+    """Return the host a link label claims to show, or None if it is not a URL or domain.
+
+    Labels starting with http(s):// or www. are always treated as URLs. Bare
+    labels count only if they end in an alphabetic top-level label that is not
+    a common file extension, so "invoice.pdf" or "v2.0" are not compared.
+    """
     if not text:
         return None
     candidate = text.strip()
+    explicit = candidate.casefold().startswith(("http://", "https://", "www."))
     try:
         parsed = urlsplit(candidate if "://" in candidate else f"http://{candidate}")
         host = parsed.hostname
@@ -166,7 +200,19 @@ def _visible_host(text: str | None) -> str | None:
         return None
     if not host or "." not in host or any(char.isspace() or ord(char) < 32 for char in host):
         return None
-    return host.rstrip(".").casefold()
+    host = host.rstrip(".").casefold()
+    if not explicit and not _looks_like_domain(host):
+        return None
+    return host
+
+
+def _looks_like_domain(host: str) -> bool:
+    top_level = host.rsplit(".", 1)[-1]
+    return len(top_level) >= 2 and top_level.isalpha() and top_level not in FILE_EXTENSIONS
+
+
+def _without_www(host: str) -> str:
+    return host[4:] if host.startswith("www.") else host
 
 
 def _finding(rule_id: str, severity: str, message: str, evidence: dict[str, str]) -> Finding:

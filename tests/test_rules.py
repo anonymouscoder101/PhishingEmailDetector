@@ -1,5 +1,7 @@
 """Behavioral tests for explainable signal rules."""
 
+import pytest
+
 from phishdetector.models import ExtractedUrl, ParsedEmail
 from phishdetector.rules import evaluate_rules
 
@@ -56,6 +58,52 @@ def test_visible_domain_mismatch_is_reported_but_matching_label_is_not() -> None
 
     assert [finding.id for finding in findings] == ["url.visible_text_mismatch"]
     assert findings[0].evidence == {"visible_host": "bank.test", "destination_host": "phish.test"}
+
+
+def test_same_link_in_text_and_html_is_counted_once() -> None:
+    urls = [
+        ExtractedUrl("http://192.0.2.4/login", "http://192.0.2.4/login", "192.0.2.4", "text"),
+        ExtractedUrl("http://192.0.2.4/login", "http://192.0.2.4/login", "192.0.2.4", "html_href", "Log in"),
+        ExtractedUrl("http://192.0.2.4/other", "http://192.0.2.4/other", "192.0.2.4", "html_href", "Other"),
+    ]
+
+    findings = evaluate_rules(ParsedEmail(), urls)
+
+    assert [finding.id for finding in findings] == ["url.ip_literal"]
+
+
+def test_different_evidence_is_kept_as_separate_findings() -> None:
+    urls = [
+        ExtractedUrl("http://192.0.2.4/", "http://192.0.2.4/", "192.0.2.4", "text"),
+        ExtractedUrl("http://192.0.2.5/", "http://192.0.2.5/", "192.0.2.5", "text"),
+    ]
+
+    findings = evaluate_rules(ParsedEmail(), urls)
+
+    assert [finding.evidence["host"] for finding in findings] == ["192.0.2.4", "192.0.2.5"]
+
+
+@pytest.mark.parametrize("label", ["invoice.pdf", "Statement.XLSX", "v2.0", "report.final.docx"])
+def test_file_names_and_version_numbers_in_link_text_are_not_hosts(label: str) -> None:
+    url = ExtractedUrl("https://billing.test/x", "https://billing.test/x", "billing.test", "html_href", label)
+
+    assert evaluate_rules(ParsedEmail(), [url]) == []
+
+
+@pytest.mark.parametrize(
+    ("label", "host"),
+    [("example.test", "www.example.test"), ("www.example.test", "example.test"), ("https://www.example.test/", "example.test")],
+)
+def test_www_prefix_matches_the_bare_domain(label: str, host: str) -> None:
+    url = ExtractedUrl(f"https://{host}/", f"https://{host}/", host, "html_href", label)
+
+    assert evaluate_rules(ParsedEmail(), [url]) == []
+
+
+def test_explicit_www_label_is_still_compared() -> None:
+    url = ExtractedUrl("https://phish.test/", "https://phish.test/", "phish.test", "html_href", "www.bank.test")
+
+    assert finding_ids(ParsedEmail(), [url]) == {"url.visible_text_mismatch"}
 
 
 def test_rule_evidence_is_bounded_and_contains_no_control_characters() -> None:
