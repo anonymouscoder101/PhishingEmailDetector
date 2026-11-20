@@ -75,4 +75,29 @@ Result: score 100 (critical), exit code 0, no parse warnings. Every finding maps
 3. **JSON passes some invisible control characters through.** `render_json` uses `ensure_ascii=False`, so C1 controls such as `\x9b` and bidi overrides such as U+202E from an `href` appear unescaped in `urls`. Suggested fix: `ensure_ascii=True`.
 4. **Minor:** only `fail` is flagged for SPF/DKIM/DMARC; `softfail`, `permerror`, and `temperror` are not. Possibly intentional; worth deciding explicitly.
 
+## False negatives observed on real spam
+
+Person A ran the tool locally on two real spam messages from a personal junk folder. The messages are not committed, and no personal details or tracking identifiers are recorded here. Both were clearly phishing to a human reader, but both scored **0 (low)** with no findings. Extraction worked as intended in both: every link was found, and nothing crashed.
+
+**Message 1: "reward reservation" email styled as a well-known ISP brand.** What a person notices: brand impersonation, a too-good-to-be-true prize, a same-day deadline, and a single "claim" button. Every link points to `storage.googleapis.com`, with random bucket and file names (`/<random>/<random>/<random>.html`) and junk tracking text after `#`.
+
+| Why no rule fired | Possible rule |
+|---|---|
+| The links use a legitimate, well-formed host. No rule knows that public cloud storage is commonly abused to host phishing pages. | `url.cloud_hosted_page`: links to commonly abused hosting (`storage.googleapis.com`, `firebasestorage.googleapis.com`, `*.blob.core.windows.net`, `*.s3.amazonaws.com`), especially direct `.html` files. Moderate weight, because legitimate mail also uses these services. |
+| The brand impersonation is visible only in the content and display name, which the rules do not inspect. | `header.display_name_mismatch` (already listed in `docs/architecture.md` but not implemented): a brand in the From display name that does not match the sender domain. |
+| The scam wording (prize, deadline, "claim") is not checked. | Weak, capped urgency and reward phrases ("claim", "reward", "expires today"), which the plan allows only as weak signals. |
+
+**Message 2: "exclusive survey invitation" email styled as a well-known retail brand.** What a person notices: brand impersonation, "Congratulations!", a "$100+" gift for completing a short survey, and urgency ("Don't put it off!", "complete your survey today"). Every link again points to `storage.googleapis.com`, to a single `.html` file in one bucket, with an encoded tracking value after `#`. No parse warnings.
+
+It was missed for the same three reasons as Message 1, and the same three proposed rules would apply.
+
+**Pattern across both messages:** both use a different brand and a different lure (reward reservation, survey gift), but both host the landing page as a single `.html` file on `storage.googleapis.com` and put per-recipient tracking data after `#`. This makes `url.cloud_hosted_page` the most promising new rule: it targets the shared infrastructure rather than the wording, which changes from campaign to campaign.
+
+Other observations from these runs:
+
+- **The same URL is listed several times in the report.** When several links share one destination but have different visible text, the extractor keeps each one (needed for the visible-text rule), and `build_report` lists every entry. The displayed `urls` list could be deduplicated. This is related to issue 1.
+- **"Unknown charset" warnings on Message 1 were caused by a malformed message, not a parser bug.** Both of its body parts declare `charset=3DUTF-8`: the sender's software applied quoted-printable encoding (`=` written as `=3D`) to the header as well as the body, producing a charset name that does not exist. The parser behaved as designed: it reported the problem and fell back to UTF-8, which is what the sender intended. Message 2 declares a valid `UTF-8` and had no warnings. Because legitimate mail systems almost never produce this error, a quoted-printable artifact in MIME headers could be a weak signal of bulk-spam tooling.
+
+Real messages tested so far are not a representative sample and do not support any accuracy claim. They show that the current rule set detects technical indicators (header and URL structure) and does not detect content-based or brand-impersonation scams sent from well-configured infrastructure.
+
 Person A approves the parse and extraction side of the report behavior. Final approval is pending agreement on items 1–3.
