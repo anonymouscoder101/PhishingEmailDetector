@@ -1,0 +1,30 @@
+Received: from unknown (198.51.100.23) by mx.example.com; Wed, 18 Nov 2026 08:14:02 +0000
+Authentication-Results: mx.example.com; spf=fail smtp.mailfrom=example-bank.test; dkim=fail header.d=example-bank.test; dmarc=fail header.from=example-bank.test
+From: Example Bank Security <security@example-bank.test>
+Reply-To: Account Support <support@collector.test>
+To: Bob Example <bob@example.com>
+Subject: Urgent: your account has been locked
+Date: Wed, 18 Nov 2026 08:14:00 +0000
+Message-ID: <suspicious-1@collector.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-boundary"
+
+--alt-boundary
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Your account has been locked. Verify your identity within 24 hours:
+http://192.0.2.10/verify
+
+--alt-boundary
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<p>Your account has been locked. Verify your identity within 24 hours.</p>
+<p><a href="http://192.0.2.10/verify">https://www.example-bank.test/verify</a></p>
+<p><a href="https://www.example-bank.test@login.collector.test/">Sign in</a></p>
+<p><a href="https://xn--xample-bank-9db.test/help">Help centre</a></p>
+<p><a href="https://secure.login.account.verify.collector.test/update">Update details</a></p>
+<p><a href="https://bit.ly/3xAmpLe">Track your case</a></p>
+
+--alt-boundary--

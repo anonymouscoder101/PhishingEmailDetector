@@ -35,3 +35,44 @@ The fixtures are synthetic behavior examples and do not have message-level phish
 ## Remaining joint work
 
 Person A and Person B still need to review these outcomes together and approve report behavior. The final integration commit remains pending that joint approval.
+
+---
+
+# Phase 4 Integration Review — Person A
+
+**Review date:** 2026-11-20  
+**Scope:** Person A's review of fixtures, extraction-to-rules integration, and safety boundaries. Prepared with AI assistance (Claude) and checked by running the tool.
+
+## Suspicious fixture added
+
+`tests/fixtures/suspicious.eml` is a synthetic phishing-style message (only `.test` domains, a documentation IP, and one shortener domain). It is designed to trigger every current rule once:
+
+| Signal in the fixture | Rule triggered | Evidence |
+|---|---|---|
+| Reply-To on a different domain | `header.reply_to_mismatch` | `example-bank.test` vs `collector.test` |
+| `spf=fail`, `dkim=fail`, `dmarc=fail` | `auth.spf_fail`, `auth.dkim_fail`, `auth.dmarc_fail` | mechanism and reported result |
+| Link to `http://192.0.2.10/verify` | `url.ip_literal` | `192.0.2.10` |
+| That link's text shows `https://www.example-bank.test/verify` | `url.visible_text_mismatch` | visible vs destination host |
+| `https://www.example-bank.test@login.collector.test/` | `url.userinfo` | full URL; host correctly reported as `login.collector.test` |
+| `xn--` host | `url.punycode` | host |
+| `secure.login.account.verify.collector.test` | `url.excessive_subdomains` | 4 subdomain labels |
+| `bit.ly` link | `url.shortener` | `bit.ly` |
+
+Result: score 100 (critical), exit code 0, no parse warnings. Every finding maps to a rule ID with sensible evidence.
+
+`tests/test_fixtures.py` pins the rule IDs each fixture triggers (as sets, so weight changes do not break it), checks the suspicious fixture's evidence, and confirms every fixture renders valid schema-version-1 JSON. Full suite: 106 passed.
+
+## Safety confirmation
+
+- Source contains no HTTP, DNS, socket, subprocess, or logging use. The only output besides the report is three fixed stderr messages in `cli.py`.
+- The parser never decodes attachments and never descends into attachment parts; nesting depth, part count, URL count, and warning count are bounded.
+- Parse warnings are fixed strings and never contain message content.
+
+## Issues found for discussion (Person B's files)
+
+1. **Duplicate findings inflate the score.** A link that appears in both the plain-text and HTML versions of an email (normal for real mail) is scored twice, because extraction keeps one entry per source as agreed. One IP-literal link scores 50 (high) instead of 25; the same link four times scores 100. Visible in `suspicious.eml`, where `url.ip_literal` appears twice. Suggested fix: in `evaluate_rules`, keep only one finding per (rule ID, evidence).
+2. **Visible-text mismatch false positives.** Any link label containing a dot is treated as a host: a label `invoice.pdf` is flagged, and so is a label `example.com` linking to `www.example.com` (+20 each). Suggested fix: only compare labels that look like URLs or domains, and treat a `www.` prefix as equivalent.
+3. **JSON passes some invisible control characters through.** `render_json` uses `ensure_ascii=False`, so C1 controls such as `\x9b` and bidi overrides such as U+202E from an `href` appear unescaped in `urls`. Suggested fix: `ensure_ascii=True`.
+4. **Minor:** only `fail` is flagged for SPF/DKIM/DMARC; `softfail`, `permerror`, and `temperror` are not. Possibly intentional; worth deciding explicitly.
+
+Person A approves the parse and extraction side of the report behavior. Final approval is pending agreement on items 1–3.
