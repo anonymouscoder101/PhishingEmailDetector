@@ -149,12 +149,12 @@ Agree on names and fields in a short kickoff before implementation. If a field m
 
 **Files:** `cli.py`, `tests/test_cli.py`.
 
-- [ ] Add CLI tests for `.eml` path input, `--json`, unreadable path, invalid arguments, oversized input, and stdin if retained in Phase 1.
-- [ ] Implement `main(argv: list[str] | None = None) -> int` to read bytes, call the parser/extractor/rules/scorer/reporting pipeline, and select text or JSON output.
-- [ ] Send concise operational errors to stderr; return nonzero only for input/processing errors. Return zero when analysis completes, regardless of score.
-- [ ] Ensure raw message bodies are never included in logs or CLI errors.
-- [ ] Run `uv run pytest tests/test_cli.py -q` and manually inspect one benign and one suspicious fixture in both output formats.
-- [ ] Commit with `feat: add phishing email detector cli`.
+- [x] Add CLI tests for `.eml` path input, `--json`, unreadable path, invalid arguments, oversized input, and stdin if retained in Phase 1.
+- [x] Implement `main(argv: list[str] | None = None) -> int` to read bytes, call the parser/extractor/rules/scorer/reporting pipeline, and select text or JSON output.
+- [x] Send concise operational errors to stderr; return nonzero only for input/processing errors. Return zero when analysis completes, regardless of score.
+- [x] Ensure raw message bodies are never included in logs or CLI errors.
+- [x] Run `uv run pytest tests/test_cli.py -q` and manually inspect one benign and one suspicious fixture in both output formats.
+- [x] Commit with `feat: add phishing email detector cli`.
 
 ### Phase 4: Joint integration review
 
