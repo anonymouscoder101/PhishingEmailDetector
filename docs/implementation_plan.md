@@ -160,12 +160,12 @@ Agree on names and fields in a short kickoff before implementation. If a field m
 
 **Pair:** Both partners.
 
-- [ ] Run the full suite with `uv run pytest -q`.
+- [x] Run the full suite with `uv run pytest -q`.
 - [ ] Review fixtures together and verify each expected finding maps to a rule ID and sensible evidence.
-- [ ] Review terminal output for control-character safety and JSON for schema stability.
-- [ ] Confirm there are no network calls, attachment handling, body logging, or unsupported safety claims.
-- [ ] Update README usage examples and limitations, including that a low score does not establish safety.
-- [ ] Record false positives, false negatives, and weight changes in a short changelog or review note; do not claim classifier accuracy from the small fixture set.
+- [x] Person B reviewed terminal output for control-character safety and JSON for schema stability; joint review remains pending.
+- [x] Person B reviewed network, attachment, body-logging, and safety-claim boundaries; joint confirmation remains pending.
+- [x] Update README usage examples and limitations, including that a low score does not establish safety.
+- [x] Record fixture outcomes, unavailable false-positive/false-negative estimates, and weight decisions in `docs/phase4-review.md`; do not claim classifier accuracy from the small fixture set.
 - [ ] Create a final integration commit after both partners approve the report behavior.
 
 ### Phase 5: Optional machine-learning extension (after the MVP)
