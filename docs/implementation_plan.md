@@ -132,14 +132,14 @@ Agree on names and fields in a short kickoff before implementation. If a field m
 
 **Files:** `models.py`, `rules.py`, `scoring.py`, `reporting.py`, `tests/test_rules.py`, `tests/test_scoring.py`, `tests/test_reporting.py`.
 
-- [ ] Add rule tests for From/Reply-To domain mismatch; reported SPF/DKIM/DMARC failure; missing authentication result treated as unknown; URL IP host, user-info, punycode, excessive subdomains, shortener, and visible-text/destination mismatch.
-- [ ] Implement `evaluate_rules(email, urls)` with stable finding IDs, bounded evidence, and documented integer weights. Keep content phrases weak and optional; do not let keywords alone produce a high score.
-- [ ] Add scoring tests for empty findings, additive weights, 100-point cap, and exact band boundaries (24/25, 49/50, 74/75).
-- [ ] Implement `calculate_score(findings)` as positive weight sum clamped to 100, mapped to the four defined bands.
-- [ ] Add report tests asserting schema version, stable JSON fields, and escaped/truncated text evidence.
-- [ ] Implement `build_report`, `render_text`, and `render_json`; label the result heuristic and not a probability.
-- [ ] Run `uv run pytest tests/test_rules.py tests/test_scoring.py tests/test_reporting.py -q` and resolve failures.
-- [ ] Commit with a focused message such as `feat: add explainable risk scoring`.
+- [x] Add rule tests for From/Reply-To domain mismatch; reported SPF/DKIM/DMARC failure; missing authentication result treated as unknown; URL IP host, user-info, punycode, excessive subdomains, shortener, and visible-text/destination mismatch.
+- [x] Implement `evaluate_rules(email, urls)` with stable finding IDs, bounded evidence, and documented integer weights. Keep content phrases weak and optional; do not let keywords alone produce a high score.
+- [x] Add scoring tests for empty findings, additive weights, 100-point cap, and exact band boundaries (24/25, 49/50, 74/75).
+- [x] Implement `calculate_score(findings)` as positive weight sum clamped to 100, mapped to the four defined bands.
+- [x] Add report tests asserting schema version, stable JSON fields, and escaped/truncated text evidence.
+- [x] Implement `build_report`, `render_text`, and `render_json`; label the result heuristic and not a probability.
+- [x] Run `uv run pytest tests/test_rules.py tests/test_scoring.py tests/test_reporting.py -q` and resolve failures.
+- [x] Commit with a focused message such as `feat: add explainable risk scoring`.
 
 **Produces:** Rules, scoring, report construction, and renderers matching the shared contract.
 
